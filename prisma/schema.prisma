@@ -1,0 +1,150 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "debian-openssl-1.1.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LifeStatus {
+  ALIVE
+  DEAD
+  INVALID
+}
+
+enum MovementType {
+  INCOME
+  EXPENSE
+}
+
+enum Frequency {
+  ONE_TIME
+  MONTHLY
+  ANNUAL
+}
+
+enum AllocationType {
+  FINANCIAL
+  REAL_ESTATE
+}
+
+enum InsuranceType {
+  LIFE
+  DISABILITY
+}
+
+model Client {
+  id          String       @id @default(uuid())
+  name        String
+  document    String?      @unique
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  simulations Simulation[]
+
+  @@index([name])
+}
+
+model Simulation {
+  id           String   @id @default(uuid())
+  clientId     String
+  name         String
+  baseRateReal Float    @default(0.04)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  client   Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  versions SimulationVersion[]
+
+  @@index([clientId, name])
+}
+
+model SimulationVersion {
+  id                  String     @id @default(uuid())
+  simulationId        String
+  version             Int
+  startDate           DateTime
+  lifeStatus          LifeStatus @default(ALIVE)
+  copiedFromVersionId String?
+  isLegacy            Boolean    @default(false)
+  isCurrentSnapshot   Boolean    @default(false)
+  createdAt           DateTime   @default(now())
+
+  simulation Simulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+
+  // self relation (opcional)
+  copiedFromVersion SimulationVersion?  @relation("CopiedFrom", fields: [copiedFromVersionId], references: [id])
+  copiedToVersions  SimulationVersion[] @relation("CopiedFrom")
+
+  allocations Allocation[]
+  movements   Movement[]
+  insurances  InsurancePolicy[]
+
+  @@unique([simulationId, version])
+  @@index([simulationId, isCurrentSnapshot])
+}
+
+model Allocation {
+  id                  String         @id @default(uuid())
+  simulationVersionId String
+  type                AllocationType
+  name                String
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  version SimulationVersion  @relation(fields: [simulationVersionId], references: [id], onDelete: Cascade)
+  records AllocationRecord[]
+
+  @@index([simulationVersionId, type])
+  @@index([name])
+}
+
+model AllocationRecord {
+  id           String   @id @default(uuid())
+  allocationId String
+  date         DateTime
+  value        Decimal  @db.Decimal(18, 2)
+  createdAt    DateTime @default(now())
+
+  allocation Allocation @relation(fields: [allocationId], references: [id], onDelete: Cascade)
+
+  // garante “uma medição por data por alocação”
+  @@unique([allocationId, date])
+  @@index([allocationId, date])
+}
+
+model Movement {
+  id                  String       @id @default(uuid())
+  simulationVersionId String
+  type                MovementType
+  amount              Decimal      @db.Decimal(18, 2)
+  frequency           Frequency
+  startDate           DateTime
+  endDate             DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  version SimulationVersion @relation(fields: [simulationVersionId], references: [id], onDelete: Cascade)
+
+  @@index([simulationVersionId, type])
+  @@index([startDate, endDate])
+}
+
+model InsurancePolicy {
+  id                  String        @id @default(uuid())
+  simulationVersionId String
+  type                InsuranceType
+  name                String
+  startDate           DateTime
+  durationMonths      Int
+  monthlyPremium      Decimal       @db.Decimal(18, 2)
+  insuredAmount       Decimal       @db.Decimal(18, 2)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  version SimulationVersion @relation(fields: [simulationVersionId], references: [id], onDelete: Cascade)
+
+  @@index([simulationVersionId, type])
+  @@index([name])
+}
