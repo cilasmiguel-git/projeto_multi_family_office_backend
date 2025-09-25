@@ -1,0 +1,34 @@
+# ── Node / pacote
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── Build / artefatos
+dist/
+coverage/
+*.tsbuildinfo
+*.log
+logs/
+
+# ── Env / segredos
+.env
+.env.local
+.env.*.local
+
+# ── Prisma
+# (NÃO ignore prisma/schema.prisma nem prisma/migrations – commit esses!)
+.prisma/
+
+# ── Editor / SO
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Docker (se gerar coisas locais)
+*.pid
+docker-data/

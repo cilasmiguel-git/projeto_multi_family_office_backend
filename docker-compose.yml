@@ -1,0 +1,29 @@
+services:
+  db:
+    image: public.ecr.aws/docker/library/postgres:15
+    container_name: mfo_db
+    environment:
+      POSTGRES_USER: planner
+      POSTGRES_PASSWORD: plannerpw
+      POSTGRES_DB: plannerdb
+    ports:
+      - "55432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  backend:
+    build: .
+    container_name: mfo_backend
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://planner:plannerpw@db:5432/plannerdb?schema=public
+      PORT: 8080
+      NODE_ENV: production
+    ports:
+      - "8080:8080"
+    command: sh -c "npx prisma migrate deploy || npx prisma migrate dev --name init && node dist/server.js"
+
+
+volumes:
+  pg_data:
