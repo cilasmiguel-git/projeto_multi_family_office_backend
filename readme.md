@@ -1,289 +1,250 @@
-MFO Planner — Backend (Fastify + Prisma)
+# 🧮 MFO Planner — Backend
 
-Backend do case “Multi Family Office Planner”. Implementa APIs para clientes, simulações, projeções patrimoniais, alocações, movimentações e seguros. Documentação interativa via Swagger.
+**Fastify + Prisma + Zod + Jest**  
+Backend do case **Multi Family Office (MFO)** para projeções patrimoniais, alocações, movimentações, seguros e clientes.
 
-📌 Stack
+![Node](https://img.shields.io/badge/Node-20.x-339933?logo=node.js&logoColor=white)
+![Fastify](https://img.shields.io/badge/Fastify-4.x-000000?logo=fastify&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-ESM%2FNodeNext-3178C6?logo=typescript&logoColor=white)
+![Jest](https://img.shields.io/badge/Jest-29-99424F?logo=jest&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-Node.js 20 + TypeScript (ESM/NodeNext)
+> Swagger: `http://localhost:8080/docs`
 
-Fastify 4 + @fastify/swagger + @fastify/swagger-ui
+---
 
-Zod v4 (schemas e validação)
+## 🧭 Sumário
 
-Prisma ORM (PostgreSQL 15)
+- [Arquitetura](#-arquitetura)
+- [Como rodar](#-como-rodar)
+- [Docker Compose](#-docker-compose)
+- [Variáveis de ambiente](#-variáveis-de-ambiente)
+- [Endpoints (resumo)](#-endpoints-resumo)
+- [Regras de negócio](#-regras-de-negócio)
+- [Paginação por cursor](#-paginação-por-cursor)
+- [Testes \& Cobertura](#-testes--cobertura)
+- [Scripts NPM](#-scripts-npm)
+- [Commits \& Padrões](#-commits--padrões)
+- [Roadmap](#-roadmap)
 
-Jest + ts-jest + Supertest (unit e E2E)
+---
 
-ESLint (padronização)
+## 🏗 Arquitetura
 
-Docker/Docker Compose
-
-🧭 Sumário
-
-Arquitetura & Pastas
-
-Como rodar localmente
-
-Docker Compose
-
-Variáveis de ambiente
-
-Endpoints principais
-
-Regras de negócio & suposições
-
-Paginação (cursor)
-
-Testes & Cobertura
-
-Scripts NPM
-
-Convencional Commits
-
-Roadmap
-
-🏗️ Arquitetura & Pastas
+```
 src/
   core/
-    http/
-      app.ts          # instancia Fastify, Swagger, plugins, rotas
-    plugins/
-      prisma.ts       # prisma no app
-      swagger.ts      # swagger + swagger-ui
-    schemas/
-      common.ts       # enums/consts comuns (MovementType, Frequency, etc.)
+    http/app.ts            # instancia Fastify, Swagger, plugins
+    plugins/{prisma,swagger}.ts
+    schemas/common.ts      # enums/constantes compartilhadas
   modules/
-    clients/
-      controller.ts
-      routes.ts
-      schemas.ts
-      service.ts
-      index.ts
-    simulations/
-      ...
-    projections/
-      controller.ts
-      routes.ts
-      schemas.ts
-      service.ts      # motor de projeção
-      index.ts
-    allocations/
-      controller.ts
-      routes.ts
-      schemas.ts
-      service.ts
-      index.ts
-    movements/
-      ...
-    insurances/
-      ...
-  server.ts            # bootstrap do servidor
+    clients/               # CRUD + paginação cursor
+    simulations/           # gerenciamento de simulações/versões
+    projections/           # motor de projeção + endpoint
+    allocations/           # ativos e timeline de registros
+    movements/             # entradas/saídas (frequências)
+    insurances/            # apólices e prêmios
+  server.ts                # bootstrap do servidor
 prisma/
   schema.prisma
-  migrations/          # migrações versionadas
+  migrations/
 tests/
-  unit/                # testes unitários (serviços)
-  e2e/                 # testes E2E (rotas)
+  unit/                    # serviços puros
+  e2e/                     # rotas Fastify com app.inject
+```
 
-💻 Como rodar localmente
+- **Fastify 4** com `@fastify/swagger` e `@fastify/swagger-ui`
+- **Prisma ORM** (PostgreSQL 15)
+- **Zod** plugado via `fastify-type-provider-zod`
+- **Jest** (unit + E2E) usando `ts-jest` em ESM/NodeNext
 
-Pré-requisitos: Node 20, Docker, Docker Compose.
+---
 
-Instalar deps
+## 💻 Como rodar
 
+> Requisitos: Node 20, Docker e Docker Compose.
+
+```bash
+# 1) Instalar dependências
 npm install
 
+# 2) Criar .env (base no .env.example)
+# DATABASE_URL=postgresql://planner:plannerpw@localhost:5432/plannerdb
+# PORT=8080
 
-.env
-Crie .env com base no .env.example:
-
-DATABASE_URL=postgresql://planner:plannerpw@localhost:5432/plannerdb
-PORT=8080
-
-
-Subir Postgres (local)
-
+# 3) Subir o banco local
 docker compose up -d db
 
-
-Prisma: gerar client e aplicar migrações
-
+# 4) Prisma
 npm run prisma:generate
 npm run prisma:migrate
 
-
-Dev
-
-npm run dev
-# ou build + start
+# 5) Executar o servidor
+npm run dev          # hot-reload
+# ou
 npm run build && npm start
 
+# Swagger: http://localhost:8080/docs
+```
+
+---
+
+## 🐳 Docker Compose
+
+```yaml
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: planner
+      POSTGRES_PASSWORD: plannerpw
+      POSTGRES_DB: plannerdb
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://planner:plannerpw@db:5432/plannerdb
+      PORT: 8080
+    ports:
+      - "8080:8080"
+
+volumes:
+  pg_data:
+```
+
+> Este repositório cobre o **backend**. No case final, o Compose agrega **db + backend + frontend**.
+
+---
+
+## 🔐 Variáveis de ambiente
+
+| Variável       | Descrição              | Exemplo                                             |
+|----------------|------------------------|-----------------------------------------------------|
+| `DATABASE_URL` | Conexão Postgres       | `postgresql://planner:plannerpw@db:5432/plannerdb` |
+| `PORT`         | Porta do servidor HTTP | `8080`                                              |
+
+---
+
+## 📚 Endpoints (resumo)
+
+> Documentação completa no Swagger **/docs**. Abaixo, um guia rápido.
+
+### Projections
+- `POST /projections/`  
+  **Body:**
+  ```json
+  {
+    "simulationId": "uuid",
+    "lifeStatus": "ALIVE" | "DEAD" | "INVALID",
+    "baseRateReal": 0.04
+  }
+  ```
+  **Retorna:** série ano a ano até 2060 (`financialAssets`, `realEstateAssets`, `totalAssets`, `totalWithoutInsurances`…)
+
+### Clients
+- `GET /clients?limit=10&cursor=<token>&q=<search>`
+- `POST /clients`
+- `GET /clients/:id`
+- `PATCH /clients/:id`
+- `DELETE /clients/:id`
+
+### Allocations
+- `GET /allocations/version/:versionId`
+- `POST /allocations/`
+- `PATCH /allocations/:id`
+- `DELETE /allocations/:id`
+- `GET /allocations/:id/records` **ou** `GET /allocations/:id/history`
+- `POST /allocations/records` _(com `allocationId` no body)_
+- `POST /allocations/:id/records` _(atalho por path param)_
+
+### Movements
+- `GET /movements/version/:versionId`
+- `POST /movements/`
+- `PATCH /movements/:id`
+- `DELETE /movements/:id`
+
+### Insurances
+- `GET /insurances/version/:versionId`
+- `POST /insurances/`
+- `PATCH /insurances/:id`
+- `DELETE /insurances/:id`
+
+---
+
+## 📐 Regras de negócio
+
+**Projeção patrimonial**  
+- Taxa real composta **padrão 4% a.a.** (parametrizável).  
+- Ponto inicial: para cada alocação, usar **o último registro ≤ data de início**.  
+- Status:
+  - `ALIVE`: normal
+  - `DEAD`: **income = 0** e **despesas / 2**
+  - `INVALID`: income encerrado; despesas inalteradas
+- **Total sem Seguros**: mesma simulação desconsiderando prêmios.
 
-Swagger UI
+**Alocações**  
+- **Nunca sobrescrever** registros; sempre criar `AllocationRecord` novo.  
+- Histórico ordenado por `date ASC`.
 
-Abra: http://localhost:8080/docs
+**Movimentações**  
+- Frequências `UNIQUE` | `MONTHLY` | `ANNUAL` e **encadeamento** de períodos.
 
-🐳 Docker Compose
+**Seguros**  
+- `monthlyPremium` entra como saída mensal dentro da vigência.
 
-O repositório já traz um docker-compose.yml. Exemplos úteis:
+---
 
-# subir apenas banco
-docker compose up -d db
+## 🔎 Paginação por cursor
 
-# subir tudo (db + backend)
-docker compose up --build
+Formato de resposta:
 
-
-No case final, o compose esperado tem db + backend + frontend.
-Este repositório cobre o backend e já está pronto para conectar no serviço db.
-
-🔐 Variáveis de ambiente
-Nome	Descrição	Exemplo
-DATABASE_URL	string de conexão Postgres	postgresql://planner:plannerpw@db:5432/plannerdb
-PORT	porta da API	8080
-📚 Endpoints principais
-
-Todos os endpoints têm schemas Zod e aparecem no /docs (Swagger).
-
-Projections
-
-POST /projections/
-Body:
-
-{
-  "simulationId": "uuid",
-  "lifeStatus": "ALIVE" | "DEAD" | "INVALID",
-  "baseRateReal": 0.04
-}
-
-
-Retorna projeção ano a ano até 2060, com linhas:
-
-financialAssets, realEstateAssets, totalAssets, totalWithoutInsurances, etc.
-
-Clients
-
-GET /clients?limit=10&cursor=<opaque>&q=<search>
-
-POST /clients (cria)
-
-GET /clients/:id
-
-PATCH /clients/:id
-
-DELETE /clients/:id
-
-Allocations
-
-GET /allocations/version/:versionId (lista ativos da versão)
-
-POST /allocations/ (cria alocação)
-
-PATCH /allocations/:id
-
-DELETE /allocations/:id
-
-GET /allocations/:id/records ou /allocations/:id/history (timeline completa)
-
-POST /allocations/records (cria registro com { allocationId, date, value })
-
-POST /allocations/:id/records (atalho: cria registro para uma alocação específica)
-
-Movements
-
-GET /movements/version/:versionId (lista por versão)
-
-POST /movements/ (cria)
-
-PATCH /movements/:id
-
-DELETE /movements/:id
-
-Insurances
-
-GET /insurances/version/:versionId
-
-POST /insurances/
-
-PATCH /insurances/:id
-
-DELETE /insurances/:id
-
-📐 Regras de negócio & suposições
-
-Projeção patrimonial
-
-Taxa real composta padrão 4% a.a. (configurável no payload).
-
-Projeta do ano da simulação até 2060.
-
-Ponto inicial: para cada alocação, considera o último registro ≤ data de início.
-
-Status de vida:
-
-DEAD: zera entradas e divide despesas por 2.
-
-INVALID: apenas encerra entradas; despesas inalteradas.
-
-ALIVE: fluxo normal.
-
-Linha “Total sem Seguros”: mesma simulação, desconsiderando prêmios iniciais de seguro.
-
-Alocações
-
-Nunca sobrescrever registros; criar novo AllocationRecord na data informada.
-
-GET /:id/history retorna a timeline ordenada por data (asc).
-
-Movimentações
-
-CRUD completo; frequências UNIQUE, MONTHLY, ANNUAL.
-
-Suporte a encadeamento (ex.: salário 2025–2035 e outro 2035–2060).
-
-Seguros
-
-Registro com name, type (LIFE|DISABILITY), startDate, durationMonths, monthlyPremium, insuredAmount.
-
-Prêmios entram como saída mensal dentro da vigência.
-
-🔎 Paginação (cursor)
-
-Endpoints de listagem usam cursor-based pagination:
-
-Request: GET /clients?limit=10&cursor=<token opaco>
-
-Response:
-
+```json
 {
   "items": [ ... ],
   "nextCursor": "opaque-token-or-null"
 }
+```
 
+- Use `nextCursor` como parâmetro `cursor` para a página seguinte.
+- O **cursor é um token opaco**: o cliente **não calcula**; apenas **repassa**.
 
-Para pegar a próxima página, envie cursor=nextCursor.
+---
 
-O cursor é um token opaco (não é “página 2”). Você nunca “inventa” um cursor: sempre usa o que veio da resposta anterior.
+## ✅ Testes & Cobertura
 
-✅ Testes & Cobertura
+- **Unit**  
+  - `projections`: crescimento com renda líquida, efeito de prêmios, status `DEAD/INVALID`  
+  - `allocations`: criação de `AllocationRecord` SEM sobrescrever  
+  - `movements`: encadeamento por períodos/frequências  
+  - `insurances`: soma de prêmios apenas dentro da vigência  
+  - `clients`: retorno `items` + `nextCursor`
 
-Unit: foca em serviços (ex.: generateProjection, regras de prêmios, encadeamento de movimentos, criação de allocation records).
-
-E2E: valida rotas (ex.: POST /projections, GET /clients, GET /allocations/:id/history).
+- **E2E**  
+  - `POST /projections`  
+  - `GET /clients` e `POST /clients`  
+  - `GET /allocations/:id/history`  
+  - `POST /insurances`  
+  - `GET /movements`
 
 Rodar:
 
+```bash
 npm test
-npm run test:cov    # com cobertura
+npm run test:cov
+```
 
+---
 
-Config:
+## 🧰 Scripts NPM
 
-Jest em ESM com ts-jest (ver jest.config.cjs e tsconfig.jest.json).
-
-Pastas: tests/unit e tests/e2e.
-
-🧰 Scripts NPM
+```json
 {
   "dev": "tsx watch src/server.ts",
   "build": "tsc -p tsconfig.json",
@@ -295,73 +256,56 @@ Pastas: tests/unit e tests/e2e.
   "prisma:migrate": "prisma migrate deploy || prisma migrate dev --name init",
   "prisma:studio": "prisma studio"
 }
+```
 
-🧾 Convencional Commits
+---
 
-feat: nova funcionalidade
+## 🧾 Commits & Padrões
 
-fix: correção
+- `feat:` nova funcionalidade  
+- `fix:` correção  
+- `test:` testes  
+- `docs:` documentação  
+- `chore:` tooling/infra (sem impacto de runtime)
 
-test: testes
+Ex.: `feat(projections): motor de projeção e endpoint POST`
 
-docs: documentação
+---
 
-chore: tarefas sem impacto de runtime (lockfile, tooling)
+## 🗺️ Roadmap
 
-Ex.: feat(projections): motor de projeção e endpoint POST
+- [ ] Seed de dados
+- [ ] Mais cenários de estresse no motor de projeção
+- [ ] SonarCloud na org do GitHub
+- [ ] AuthN/Z (futuro)
+- [ ] Integração com o Frontend (Next 14)
 
-🗺️ Roadmap
+---
 
- Seed de dados
+### 📎 Exemplos rápidos (cURL)
 
- Mais cenários de projeção (estresse)
-
- Autenticação/autorização (futuro)
-
- Integração com SonarCloud (organization do GitHub)
-
- Frontend (Next.js 14 + Shadcn UI + TanStack Query + RHF + Zod)
-
-📄 Licença
-
-Uso educacional/avaliativo (case).
-
-💬 Contato
-
-Dúvidas/sugestões: abra uma issue.
-
-Exemplos rápidos (cURL)
-
-Criar apólice de seguro:
-
-curl -X POST http://localhost:8080/insurances/ \
-  -H "content-type: application/json" \
-  -d '{
-    "simulationVersionId":"<uuid-da-versao>",
-    "name":"Seguro de Vida",
-    "type":"LIFE",
-    "startDate":"2025-01-01",
-    "durationMonths":120,
-    "monthlyPremium":100,
-    "insuredAmount":100000
-  }'
-
-
-Gerar projeção:
-
+```bash
+# Projeção
 curl -X POST http://localhost:8080/projections/ \
   -H "content-type: application/json" \
   -d '{"simulationId":"<uuid>","lifeStatus":"ALIVE","baseRateReal":0.04}'
+```
 
-Como salvar e enviar este README
+```bash
+# Criar registro de alocação
+curl -X POST http://localhost:8080/allocations/records \
+  -H "content-type: application/json" \
+  -d '{"allocationId":"<uuid>","date":"2025-01-01","value":10000}'
+```
 
-No PowerShell, faça:
+---
 
-# Se já existe um arquivo "readme", renomeie:
-git mv readme README.md
+## 📄 Licença
 
-# (se não existir, crie o README.md e cole o conteúdo acima)
+Uso educacional/avaliativo (case).
 
-git add README.md
-git commit -m "docs(README): visão geral, arquitetura, endpoints, setup e testes"
-git push
+---
+
+### 💬 Contato
+
+Abra uma issue no repositório para dúvidas ou sugestões.
