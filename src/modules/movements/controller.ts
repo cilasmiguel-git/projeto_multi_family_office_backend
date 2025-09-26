@@ -11,6 +11,9 @@ export function movementsController(app: FastifyInstance) {
         orderBy: { createdAt: 'asc' },
       });
     },
+    list: async () => {
+      return app.prisma.movement.findMany({ orderBy: { createdAt: 'asc' } });
+    },
     create: async (req: any, reply: any) => {
       const body = upsertMovementBody.parse(req.body);
       const created = await app.prisma.movement.create({ data: body });

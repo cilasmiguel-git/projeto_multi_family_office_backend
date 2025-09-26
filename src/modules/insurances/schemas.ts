@@ -2,11 +2,11 @@
 import { z } from 'zod';
 import { InsuranceType } from '../../core/schemas/common.js';
 export const upsertInsuranceBody = z.object({
-  simulationVersionId: z.string().uuid(),
-  type: InsuranceType,
   name: z.string().min(1),
+  type: InsuranceType.optional().default('LIFE'),
   startDate: z.coerce.date(),
-  durationMonths: z.number().int().positive(),
-  monthlyPremium: z.coerce.number(),
-  insuredAmount: z.coerce.number()
+  durationMonths: z.coerce.number().int().nonnegative(),
+  monthlyPremium: z.coerce.number().nonnegative(),
+  insuredAmount: z.coerce.number().nonnegative(),
+  simulationVersionId: z.string().uuid().optional(),
 });

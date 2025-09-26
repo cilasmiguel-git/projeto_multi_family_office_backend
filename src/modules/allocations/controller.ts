@@ -19,19 +19,19 @@ export function allocationsController(app: FastifyInstance) {
     },
 
     update: async (req: any) => {
-      const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+      const { id } = z.object({ id: z.string() }).parse(req.params);
       const body = upsertAllocationBody.pick({ type: true, name: true }).partial().parse(req.body);
       return app.prisma.allocation.update({ where: { id }, data: body });
     },
 
     remove: async (req: any, reply: any) => {
-      const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+      const { id } = z.object({ id: z.string() }).parse(req.params);
       await app.prisma.allocation.delete({ where: { id } });
       return reply.code(204).send();
     },
 
     listRecords: async (req: any) => {
-      const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+      const { id } = z.object({ id: z.string() }).parse(req.params);
       return app.prisma.allocationRecord.findMany({
         where: { allocationId: id },
         orderBy: { date: 'asc' },
