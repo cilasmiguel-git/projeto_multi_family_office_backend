@@ -135,6 +135,7 @@ volumes:
 ## 📚 Endpoints (resumo)
 
 > Documentação completa no Swagger **/docs**. Abaixo, um guia rápido.
+<img width="3269" height="978" alt="image" src="https://github.com/user-attachments/assets/e7ffb7c5-1761-4147-a21d-e524d5257741" />
 
 ### Projections
 - `POST /projections/`  
