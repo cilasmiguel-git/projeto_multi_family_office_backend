@@ -30,6 +30,13 @@ Backend do case **Multi Family Office (MFO)** para projeções patrimoniais, alo
 
 ---
 
+## Qualidade do Código
+
+- [Relatório SonarCloud - Backend](https://sonarcloud.io/project/overview?id=cilasmiguel-git_projeto_multi_family_office_backend)  
+- [Relatório SonarCloud - Frontend](https://sonarcloud.io/project/overview?id=cilasmiguel-git_projeto_multi_family_office_frontend)
+
+---
+
 ## 🏗 Arquitetura
 
 ```
@@ -306,7 +313,3 @@ curl -X POST http://localhost:8080/allocations/records \
 Uso educacional/avaliativo (case).
 
 ---
-
-### 💬 Contato
-
-Abra uma issue no repositório para dúvidas ou sugestões.
